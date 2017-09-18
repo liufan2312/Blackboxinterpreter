@@ -1,4 +1,4 @@
-from data_set_feature_extractor import data_set_feature_extraction
+from dataSetFeatureExtractor import data_set_feature_extraction
 
 class StaticFeatureIntepretator(object):
 

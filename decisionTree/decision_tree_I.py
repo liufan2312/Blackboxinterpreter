@@ -9,8 +9,6 @@ class decision_tree_I(object):
         self.root = node(data)
         self.leafs = [self.root];
 
-    def _get_minimal_error(self, data):
-        pass
 
     def build_tree(self):
         pass
