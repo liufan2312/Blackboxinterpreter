@@ -11,8 +11,8 @@ class EmpericalErrorEvaluator(object):
         self.data = data
         self.data_set_feature_extractor = data_set_feature_extractor
         self.data_set_feature_extractor = data_set_feature_extractor
-        self.decision_tree_I = decision_tree_I(data, list_of_intepreters, max_depth)
-        self.max_depth = max_depth
+        self.decision_tree_I = decision_tree_I(data, list_of_intepreters, max_split)
+        self.max_depth = max_split
 
     def uniform_split(self):
 
