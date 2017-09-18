@@ -2,7 +2,7 @@ from decision_tree import decision_tree_I
 
 class EmpericalErrorEvaluator(object):
 
-    def __init__(self, data, data_set_feature_extractor, list_of_intepreters, max_depth, emp_err_model):
+    def __init__(self, data, data_set_feature_extractor, list_of_intepreters, max_split, emp_err_model):
         '''
         :param data: last column is the label or response
         :param data_set_feature_extractor: extract features from each partition which is static

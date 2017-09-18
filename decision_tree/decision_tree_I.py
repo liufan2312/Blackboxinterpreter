@@ -2,7 +2,7 @@ import node
 
 class decision_tree_I(object):
 
-    def __init__(self, data, list_of_interpreter, max_depth):
+    def __init__(self, data, list_of_interpreter, max_split):
         self.data = data
         self.list_of_interpreter = list_of_interpreter
         self.max_depth = max_depth
@@ -21,7 +21,7 @@ class decision_tree_I(object):
         '''
         :return: list of leafs after max_depth random split
         '''
-        
+
 
 
     def leafs(self):
