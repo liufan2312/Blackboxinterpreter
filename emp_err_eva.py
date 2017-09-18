@@ -1,0 +1,16 @@
+from decision_tree import decision_tree_I
+
+class EmpericalErrorEvaluator(object):
+
+    def __init__(self, data, data_set_feature_extractor, list_of_intepreters):
+        '''
+        :param data: last column is the label or response
+        :param data_set_feature_extractor: extract features from each partition which is static
+        :param list_of_intepreters:
+        '''
+        self.data = data
+        self.data_set_feature_extractor = data_set_feature_extractor
+        self.data_set_feature_extractor = data_set_feature_extractor
+        self.decision_tree_I = decision_tree_I(data)
+
+    def uniform_split(self):
