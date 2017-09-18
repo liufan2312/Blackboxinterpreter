@@ -1,6 +1,8 @@
+from data_set_feature_extractor import data_set_feature_extraction
+
 class StaticFeatureIntepretator(object):
 
-    def __init__(self, data, label, black_box_model, data_set_feature_extractor, emeprical_error_predictor):
+    def __init__(self, data, label, black_box_model, data_set_feature_extractor, emeprical_error_predictor, list_of_intepreters):
         '''
         :param data:  orginal data
         :param label: label
@@ -14,4 +16,10 @@ class StaticFeatureIntepretator(object):
         self.black_box_label = black_box_model(data)
         self.data_set_feature_extractor = data_set_feature_extractor
 
-    def
+    def fit_emperical_predictor(self):
+        #estalish decision tree
+        #call random partition several tunes
+        #each time return leafs
+        for i in range(runs):
+
+

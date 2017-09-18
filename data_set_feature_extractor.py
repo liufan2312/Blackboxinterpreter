@@ -12,3 +12,4 @@ class data_set_feature_extraction(object):
         :return: numpy array (only one row) of features
         '''
         pass
+
