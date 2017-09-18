@@ -9,10 +9,12 @@ class decision_tree_I(object):
         self.list_of_interpreter = list_of_interpreter
         self.max_split = max_split
         self.label = label
+
         self.root = node(data, label)
         self.minimal_data_size = minimal_data_size
         self.leaves = [self.root]
         self.nodes = [self.root]
+
 
 
     def build_tree(self):
@@ -23,6 +25,7 @@ class decision_tree_I(object):
         '''
         :return: list of leaves after max_depth random split
         '''
+
         n_s, n_f = self.data.shape
         data = self.data
         for i in range(self.max_split):

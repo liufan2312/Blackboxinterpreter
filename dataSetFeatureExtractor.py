@@ -1,6 +1,10 @@
+
 from collections import defaultdict, OrderedDict, deque
 import copy
 import sys
+
+class dataSetFeatureExtractor(object):
+
 
 import numpy as np
 import scipy.stats
