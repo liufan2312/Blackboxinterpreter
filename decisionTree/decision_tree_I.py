@@ -5,6 +5,7 @@ class decision_tree_I(object):
 
     def __init__(self, data, label, type_list, list_of_interpreter, max_split, minimal_data_size):
         self.data = data
+        self.type_list = type_list
         self.list_of_interpreter = list_of_interpreter
         self.max_split = max_split
         self.label = label
