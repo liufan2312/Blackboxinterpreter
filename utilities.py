@@ -14,7 +14,9 @@ class utilities(object):
                 err = np.mean(label == label_hat)
             else:
                 err = np.mean((label_hat-label)**2)
-            if err < minimal_error:minimal_error = err
+
+            if err < minimal_error : minimal_error = err
+
 
         return minimal_error
 

@@ -38,6 +38,6 @@ class StaticFeatureIntepretator(object):
         self.emeprical_error_predictor.fit(dataSetFeatureList,minErrorList)
 
     # predict data from empirical predictor
-    def predict(self, data, label):
-        feature = dataSetFeatureExtractor.extract_features(node(data,label))
+    def predict(self, data, label,typeList):
+        feature = dataSetFeatureExtractor.extract_features(node(data,label,typeList))
         return self.emeprical_error_predictor.predict(feature)
