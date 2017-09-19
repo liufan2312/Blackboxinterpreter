@@ -1,4 +1,4 @@
-from data_set_feature_extractor import DataSetFeatureExtractor
+from dataSetFeatureExtractor import DataSetFeatureExtractor
 import numpy as np
 
 x = np.ones((2, 2))
