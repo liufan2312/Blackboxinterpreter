@@ -11,10 +11,10 @@ class utilities(object):
             model.fit(data, label)
             label_hat = model.predict(data)
             if dis_continous_flag:
-                err = np.sum(label == label_hat)/len(label)
+                err = np.mean(label == label_hat)
             else:
                 err = np.mean((label_hat-label)**2)
-            if err<minimal_error:minimal_error = err
+            if err < minimal_error:minimal_error = err
 
         return minimal_error
 

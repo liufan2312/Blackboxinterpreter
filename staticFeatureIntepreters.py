@@ -20,6 +20,5 @@ class StaticFeatureIntepretator(object):
         #estalish decision tree
         #call random partition several tunes
         #each time return leafs
-        for i in range(runs):
 
 
