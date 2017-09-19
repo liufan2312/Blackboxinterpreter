@@ -1,4 +1,5 @@
 class node(object):
+    
     def __init__(self, data, label, type_list):
         '''
         :param data:  data is a numpy array with (sample_size x number of columns, [data point features])
