@@ -19,35 +19,100 @@ from sklearn.multiclass import OneVsRestClassifier
 
 class DataSetFeatureExtractor(object):
 
+    feature_list = ['number_of_instances',
+                    'log_number_of_instances',
+                    'number_of_classes',
+                    'number_of_features',
+                    'log_number_of_feature',
+                    'missing_values',
+                    'number_of_instances_with_missing_values',
+                    'percentage_of_instances_with_missing_values',
+                    'number_of_features_with_missing_values',
+                    'percentage_of_features_with_missing_values',
+                    'number_of_missing_values',
+                    'percentage_of_missing_values',
+                    'number_of_numeric_features',
+                    'number_of_categorical_features',
+                    'ratio_numerical_to_nominal',
+                    'ratio_nominal_to_numerical',
+                    'data_set_ratio',
+                    'log_data_set_ratio',
+                    'inverse_data_set_ratio',
+                    'log_inverse_data_set_ratio',
+                    'class_occurrences',
+                    'class_probability_min',
+                    'class_probability_max',
+                    'class_probability_mean',
+                    'class_probability_STD',
+                    'num_symbols',
+                    'symbols_min',
+                    'symbols_max',
+                    'symbols_mean',
+                    'symbols_STD',
+                    'symbols_sum',
+                    'kurtosis_ses',
+                    'kurtosis_min',
+                    'kurtosis_max',
+                    'kurtosis_mean',
+                    'kurtosis_STD',
+                    # 'Skewnesses',
+                    'skewness_min',
+                    'skewness_max',
+                    'skewness_mean',
+                    'skewness_STD',
+                    'class_entropy',
+                    # @metafeatures.define("normalized_class_entropy")
+                    # @metafeatures.define("attribute_entropy")
+                    # @metafeatures.define("normalized_attribute_entropy")
+                    # @metafeatures.define("joint_entropy")
+                    # @metafeatures.define("mutual_information")
+                    # @metafeatures.define("noise-signal-ratio")
+                    # @metafeatures.define("signal-noise-ratio")
+                    # @metafeatures.define("equivalent_number_of_attributes")
+                    # @metafeatures.define("conditional_entropy")
+                    # @metafeatures.define("average_attribute_entropy")
+                    'landmark_LDA',
+                    'landmark_naive_Bayes',
+                    'landmark_decision_tree',
+                    'landmark_decision_node_learner',
+                    'landmark_random_node_learner',
+                    'landmark_1NN',
+                    'PCA',
+                    'PCA_fraction_of_components_for_95_percent_variance',
+                    'PCA_Kurtosis_first_PC',
+                    'PCA_skewness_first_PC']
+
     def __init__(self, x, y):
+
         self.x = x
         self.y = y
+        self.numberOfInstances = float(x.shape[0])
+        self.numberOfFeatures = float(x.shape[1])
 
-    def extract_features(self, features_used):
+    def extract_features(self, feature_used):
         features = []
-        for feature in features_used:
-            features.append(getattr(self, feature)(self.x, self.y))
+        for feature in feature_used:
+            if feature in self.feature_list:
+                features.append(getattr(self, feature)())
 
+            else:
+                features.append(None)
         return features
 
-    @staticmethod
-    def number_of_instances(x, y):
-        return float(x.shape[0])
+    def number_of_instances(self):
+        return self.numberOfInstances
 
-    @staticmethod
-    def log_number_of_instances(x, y):
-        return np.log(DataSetFeatureExtractor.number_of_instances(x, y))
+    def log_number_of_instances(self):
+        return np.log(self.numberOfInstances)
 
-    @staticmethod
-    def number_of_classes(x, y):
-        if len(y.shape) == 2:
-            return np.mean([len(np.unique(y[:, i])) for i in range(y.shape[1])])
+    def number_of_classes(self):
+        if len(self.y.shape) == 2:
+            return np.mean([len(np.unique(self.y[:, i])) for i in range(self.y.shape[1])])
         else:
-            return float(len(np.unique(y)))
+            return float(len(np.unique(self.y)))
 
-    @staticmethod
-    def number_of_features(x, y):
-        return float(x.shape[1])
+    def number_of_features(self):
+        return self.numberOfFeatures
 
     @staticmethod
     def log_number_of_features(x, y):
@@ -74,15 +139,14 @@ class DataSetFeatureExtractor(object):
         else:
             missing = DataSetFeatureExtractor.missing_values(x, y)
             new_missing = missing.tocsr()
-            num_missing = [np.sum(new_missing.data[new_missing.indptr[i]:new_missing.indptr[i + 1]]) for i in
-                           range(new_missing.shape[0])]
+            num_missing = [np.sum(new_missing.data[new_missing.indptr[i]:new_missing.indptr[i + 1]]) for i in range(new_missing.shape[0])]
 
-            return float(np.sum([1 if num > 0 else 0 for num in num_missing]))
+        return float(np.sum([1 if num > 0 else 0 for num in num_missing]))
 
     @staticmethod
     def percentage_of_instances_with_missing_values(x, y):
         return DataSetFeatureExtractor.number_of_instances_with_missing_values(x, y) / \
-               DataSetFeatureExtractor.number_of_instances(x, y)
+        DataSetFeatureExtractor.number_of_instances(x, y)
 
     @staticmethod
     def number_of_features_with_missing_values(x, y):
@@ -94,15 +158,14 @@ class DataSetFeatureExtractor(object):
         else:
             missing = DataSetFeatureExtractor.missing_values(x, y)
             new_missing = missing.tocsc()
-            num_missing = [np.sum(new_missing.data[new_missing.indptr[i]:new_missing.indptr[i + 1]]) for i in
-                           range(missing.shape[1])]
+            num_missing = [np.sum(new_missing.data[new_missing.indptr[i]:new_missing.indptr[i + 1]]) for i in range(missing.shape[1])]
 
-            return float(np.sum([1 if num > 0 else 0 for num in num_missing]))
+        return float(np.sum([1 if num > 0 else 0 for num in num_missing]))
 
     @staticmethod
     def percentage_of_features_with_missing_values(x, y):
         return DataSetFeatureExtractor.number_of_features_with_missing_values(x, y) / \
-               DataSetFeatureExtractor.number_of_features(x, y)
+        DataSetFeatureExtractor.number_of_features(x, y)
 
     @staticmethod
     def number_of_missing_values(x, y):
@@ -138,7 +201,7 @@ class DataSetFeatureExtractor(object):
     @ staticmethod
     def data_set_ratio(x, y):
         return float(DataSetFeatureExtractor.number_of_features(x, y)) / \
-               float(DataSetFeatureExtractor.number_of_instances(x, y))
+        float(DataSetFeatureExtractor.number_of_instances(x, y))
 
     @staticmethod
     def log_data_set_ratio(x, y):
