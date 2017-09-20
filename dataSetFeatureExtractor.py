@@ -3,8 +3,6 @@ from collections import defaultdict, OrderedDict, deque
 import copy
 import sys
 
-class dataSetFeatureExtractor(object):
-
 
 import numpy as np
 import scipy.stats
@@ -19,7 +17,7 @@ from sklearn.multiclass import OneVsRestClassifier
 
 class DataSetFeatureExtractor(object):
 
-    feature_list = ['number_of_instances',
+    featureList = ['number_of_instances',
                     'log_number_of_instances',
                     'number_of_classes',
                     'number_of_features',
@@ -88,6 +86,10 @@ class DataSetFeatureExtractor(object):
         self.y = y
         self.numberOfInstances = float(x.shape[0])
         self.numberOfFeatures = float(x.shape[1])
+        self.missing = None
+
+    def get_feature_list(self):
+        return self.featureList
 
     def extract_features(self, feature_used):
         features = []
@@ -114,23 +116,18 @@ class DataSetFeatureExtractor(object):
     def number_of_features(self):
         return self.numberOfFeatures
 
-    @staticmethod
-    def log_number_of_features(x, y):
-        return np.log(DataSetFeatureExtractor.number_of_features(x))
+    def log_number_of_features(self):
+        return np.log(self.numberOfFeatures)
 
-    @staticmethod
-    def missing_values(x, y):
-        if not sps.issparse(x):
-            missing = ~np.isfinite(x)
-            return missing
+    def missing_values(self):
+        if not sps.issparse(self.x):
+            self.missing = ~np.isfinite(self.x)
 
         else:
-            data = [True if not np.isfinite(item) else False for item in x.data]
-            missing = x.__class__((data, x.indices, x.indptr), shape=x.shape, dtype=np.bool)
-            return missing
+            data = [True if not np.isfinite(item) else False for item in self.x.data]
+            self.missing = self.x.__class__((data, self.x.indices, self.x.indptr), shape=self.x.shape, dtype=np.bool)
 
-    @staticmethod
-    def number_of_instances_with_missing_values(x, y):
+    def number_of_instances_with_missing_values(self, x, y):
         if not sps.issparse(x):
             missing = DataSetFeatureExtractor.missing_values(x, y)
             num_missing = missing.sum(axis=1)
