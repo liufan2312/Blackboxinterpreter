@@ -4,7 +4,8 @@ import numpy as np
 x = np.random.rand(100, 10)
 y = np.random.randint(2, size=(100, 1))
 
-x[0, 0] = np.nan
+x[0, 0] = np.inf
+x[1, 0] = np.nan
 
 l = DataSetFeatureExtractor(x, y).extract_features(['number_of_instances',
                                                     'log_number_of_instances',

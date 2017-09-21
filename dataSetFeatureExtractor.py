@@ -46,28 +46,17 @@ class DataSetFeatureExtractor(object):
                    'symbols_min',
                    'symbols_max',
                    'symbols_mean',
-                   'symbols_STD',
+                   'symbols_std',
                    'symbols_sum',
                    'kurtosis_min',
                    'kurtosis_max',
                    'kurtosis_mean',
                    'kurtosis_std',
-                   # 'Skewnesses',
                    'skewness_min',
                    'skewness_max',
                    'skewness_mean',
                    'skewness_std',
                    'class_entropy',
-                   # @metafeatures.define("normalized_class_entropy")
-                   # @metafeatures.define("attribute_entropy")
-                   # @metafeatures.define("normalized_attribute_entropy")
-                   # @metafeatures.define("joint_entropy")
-                   # @metafeatures.define("mutual_information")
-                   # @metafeatures.define("noise-signal-ratio")
-                   # @metafeatures.define("signal-noise-ratio")
-                   # @metafeatures.define("equivalent_number_of_attributes")
-                   # @metafeatures.define("conditional_entropy")
-                   # @metafeatures.define("average_attribute_entropy")
                    'landmark_lda',
                    'landmark_naive_bayes',
                    'landmark_decision_tree',
@@ -88,8 +77,8 @@ class DataSetFeatureExtractor(object):
         self.numberOfInstances = x.shape[0]
         self.numberOfFeatures = x.shape[1]
 
-        # PCA calculate can't take NaN entries, so we remove those
-        mask = ~np.any(np.isnan(self.x), axis=1)
+        # PCA calculate can't take NaN or inf entries, so we remove those rows
+        mask = ~np.any(~np.isfinite(self.x), axis=1)
         self.x_clean = self.x[mask]
         self.y_clean = self.y[mask]
 
@@ -394,7 +383,7 @@ class DataSetFeatureExtractor(object):
         pca_.components_ = components
 
         skewness = scipy.stats.skew(transformed)
-        
+
         return skewness[0]
 
 '''
