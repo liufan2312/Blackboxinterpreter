@@ -3,15 +3,18 @@ from collections import defaultdict, OrderedDict, deque
 import copy
 import sys
 
-
 import numpy as np
 import scipy.stats
-from scipy.linalg import LinAlgError
 import scipy.sparse as sps
 import sklearn
 import sklearn.metrics
 import sklearn.model_selection
 import sklearn.decomposition
+import sklearn.discriminant_analysis
+import sklearn.naive_bayes
+import sklearn.tree
+import sklearn.neighbors
+
 from sklearn.utils import check_array
 from sklearn.multiclass import OneVsRestClassifier
 
@@ -37,7 +40,6 @@ class DataSetFeatureExtractor(object):
                    'log_data_set_ratio',
                    'inverse_data_set_ratio',
                    'log_inverse_data_set_ratio',
-                   'class_occurrences',
                    'class_probability_min',
                    'class_probability_max',
                    'class_probability_mean',
@@ -70,10 +72,17 @@ class DataSetFeatureExtractor(object):
     def __init__(self, x, y):
 
         if type(x) is not np.ndarray or type(y) is not np.ndarray:
-            print "scream!!!"
+            # TODO: raise correct error
+            print "x or y are not numpy arrays"
 
-        self.x = x
-        self.y = y
+        if len(y.shape) != 1:
+            # TODO: raise correct error
+            print "y has to be a row or column vector"
+
+        # TODO: confirm the shape of y
+        self.x = x  # x is the data set with categorical variables one-hot encoded
+        self.y = y  # y is the labels as a 1d row or column vector, assume no missing in y
+
         self.numberOfInstances = x.shape[0]
         self.numberOfFeatures = x.shape[1]
 
@@ -81,6 +90,13 @@ class DataSetFeatureExtractor(object):
         mask = ~np.any(~np.isfinite(self.x), axis=1)
         self.x_clean = self.x[mask]
         self.y_clean = self.y[mask]
+
+        # keep track of class occurrence
+        occurrence_dict = defaultdict(float)
+        for value in self.y:
+            occurrence_dict[value] += 1
+
+        self.occurrence_dict = occurrence_dict
 
         if not sps.issparse(self.x):
             self.missing = ~np.isfinite(self.x)
@@ -386,82 +402,168 @@ class DataSetFeatureExtractor(object):
 
         return skewness[0]
 
-'''
-    @staticmethod
-    def class_occurrences(x, y):
-        if len(y.shape) == 2:
-            occurrences = []
-            for i in range(y.shape[1]):
-                occurrences.append(self._calculate(x, y))
-            return occurrences
+    ################################################################################
+    # Landmarking features, computed with cross validation
+    # These should be invoked with the same transformations of X and y with which
+    # sklearn will be called later on
+    # from Pfahringer 2000
+    # Linear discriminant learner
+
+    def landmark_lda(self):
+        # TODO: modify these part
+        # to not get a nan, n_split has to be at least 2 and at most the number of rows in x_clean
+        n_split = 4
+
+        if not sps.issparse(self.x_clean):
+            kf = sklearn.model_selection.StratifiedKFold(n_splits=n_split)
+            accuracy = 0.
+
+            try:
+                for train, test in kf.split(self.x_clean, self.y_clean):
+                    lda = sklearn.discriminant_analysis.LinearDiscriminantAnalysis()
+                    lda.fit(self.x_clean[train], self.y_clean[train])
+
+                    predictions = lda.predict(self.x_clean[test])
+                    accuracy += sklearn.metrics.accuracy_score(predictions, self.y_clean[test])
+                return accuracy / n_split
+
+            except scipy.linalg.LinAlgError as e:
+                # self.logger.warning("LDA failed: %s Returned 0 instead!" % e)
+                return np.NaN
+
+            except ValueError as e:
+                # self.logger.warning("LDA failed: %s Returned 0 instead!" % e)
+                return np.NaN
         else:
-            occurence_dict = defaultdict(float)
-            for value in y:
-                occurence_dict[value] += 1
-            return occurence_dict
+            return np.NaN
 
-    def ClassProbabilityMin(X, y, categorical):
-        occurences = ClassOccurences(X, y, categorical)
+    def landmark_naive_bayes(self):
+        n_split = 4
 
+        if not sps.issparse(self.x_clean):
+            kf = sklearn.model_selection.StratifiedKFold(n_splits=n_split)
+
+            accuracy = 0.
+            for train, test in kf.split(self.x_clean, self.y_clean):
+                nb = sklearn.naive_bayes.GaussianNB()
+                nb.fit(self.x_clean[train], self.y_clean[train])
+
+                predictions = nb.predict(self.x_clean[test])
+                accuracy += sklearn.metrics.accuracy_score(predictions, self.y_clean[test])
+            return accuracy / n_split
+
+        else:
+            return np.NaN
+
+    def landmark_decision_tree(self):
+        n_split = 4
+
+        if not sps.issparse(self.x_clean):
+            kf = sklearn.model_selection.StratifiedKFold(n_splits=n_split)
+            accuracy = 0.
+
+            for train, test in kf.split(self.x_clean, self.y_clean):
+                random_state = sklearn.utils.check_random_state(42)
+                tree = sklearn.tree.DecisionTreeClassifier(random_state=random_state)
+
+                tree.fit(self.x_clean[train], self.y_clean[train])
+                predictions = tree.predict(self.x_clean[test])
+                accuracy += sklearn.metrics.accuracy_score(predictions, self.y_clean[test])
+            return accuracy / n_split
+
+        else:
+            return np.NaN
+
+    def landmark_decision_node_learner(self):
+        n_split = 4
+
+        if not sps.issparse(self.x_clean):
+            kf = sklearn.model_selection.StratifiedKFold(n_splits=n_split)
+            accuracy = 0.
+
+            for train, test in kf.split(self.x_clean, self.y_clean):
+                random_state = sklearn.utils.check_random_state(42)
+                node = sklearn.tree.DecisionTreeClassifier(
+                    criterion="entropy", max_depth=1, random_state=random_state,
+                    min_samples_split=2, min_samples_leaf=1, max_features=None)
+
+                node.fit(self.x_clean[train], self.y_clean[train])
+                predictions = node.predict(self.x_clean[test])
+                accuracy += sklearn.metrics.accuracy_score(predictions, self.y_clean[test])
+            return accuracy / n_split
+
+        else:
+            return np.NaN
+
+    def landmark_random_node_learner(self):
+        n_split = 4
+
+        if not sps.issparse(self.x_clean):
+            kf = sklearn.model_selection.StratifiedKFold(n_splits=n_split)
+            accuracy = 0.
+
+            for train, test in kf.split(self.x_clean, self.y_clean):
+                random_state = sklearn.utils.check_random_state(42)
+                node = sklearn.tree.DecisionTreeClassifier(
+                    criterion="entropy", max_depth=1, random_state=random_state,
+                    min_samples_split=2, min_samples_leaf=1, max_features=1)
+
+                node.fit(self.x_clean[train], self.y_clean[train])
+                predictions = node.predict(self.x_clean[test])
+                accuracy += sklearn.metrics.accuracy_score(predictions, self.y_clean[test])
+            return accuracy / n_split
+
+        else:
+            return np.NaN
+
+    # Replace the Elite 1NN with a normal 1NN, this slightly changes the
+    # intuition behind this landmark, but Elite 1NN is used nowhere else...
+
+    def landmark_1nn(self):
+        n_split = 4
+
+        kf = sklearn.model_selection.StratifiedKFold(n_splits=n_split)
+
+        accuracy = 0.
+        for train, test in kf.split(self.x_clean, self.y_clean):
+            kNN = sklearn.neighbors.KNeighborsClassifier(n_neighbors=1)
+
+            kNN.fit(self.x_clean[train], self.y_clean[train])
+            predictions = kNN.predict(self.x_clean[test])
+            accuracy += sklearn.metrics.accuracy_score(predictions, self.y_clean[test])
+
+        return accuracy / n_split
+
+    def class_probability_min(self):
         min_value = np.iinfo(np.int64).max
-        if len(y.shape) == 2:
-            for i in range(y.shape[1]):
-                for num_occurences in occurences[i].values():
-                    if num_occurences < min_value:
-                        min_value = num_occurences
-        else:
-            for num_occurences in occurences.values():
-                if num_occurences < min_value:
-                    min_value = num_occurences
-        return float(min_value) / float(y.shape[0])
 
-    def ClassProbabilityMax(X, y, categorical):
-        occurences = ClassOccurences(X, y, categorical)
+        for num_occurrences in self.occurrence_dict.values():
+            if num_occurrences < min_value:
+                min_value = num_occurrences
+
+        return float(min_value) / float(self.numberOfInstances)
+
+    def class_probability_max(self):
         max_value = -1
 
-        if len(y.shape) == 2:
-            for i in range(y.shape[1]):
-                for num_occurences in occurences[i].values():
-                    if num_occurences > max_value:
-                        max_value = num_occurences
-        else:
-            for num_occurences in occurences.values():
-                if num_occurences > max_value:
-                    max_value = num_occurences
-        return float(max_value) / float(y.shape[0])
+        for num_occurrences in self.occurrence_dict.values():
+            if num_occurrences > max_value:
+                max_value = num_occurrences
 
-    def ClassProbabilityMean(X, y, categorical):
-        occurence_dict = ClassOccurences(X, y, categorical)
+        return float(max_value) / float(self.numberOfInstances)
 
-        if len(y.shape) == 2:
-            occurences = []
-            for i in range(y.shape[1]):
-                occurences.extend(
-                    [occurrence for occurrence in occurence_dict[
-                        i].values()])
-            occurences = np.array(occurences)
-        else:
-            occurences = np.array([occurrence for occurrence in occurence_dict.values()],
-                                  dtype=np.float64)
-        return (occurences / y.shape[0]).mean()
+    def class_probability_mean(self):
+        occurrences = np.array([occurrence for occurrence in self.occurrence_dict.values()], dtype=np.float64)
 
-    def ClassProbabilitySTD(X, y, categorical):
-        occurence_dict = ClassOccurences(X, y, categorical)
+        return (occurrences / self.numberOfInstances).mean()
 
-        if len(y.shape) == 2:
-            stds = []
-            for i in range(y.shape[1]):
-                std = np.array(
-                    [occurrence for occurrence in occurence_dict[
-                        i].values()],
-                    dtype=np.float64)
-                std = (std / y.shape[0]).std()
-                stds.append(std)
-            return np.mean(stds)
-        else:
-            occurences = np.array([occurrence for occurrence in occurence_dict.values()],
-                                  dtype=np.float64)
-            return (occurences / y.shape[0]).std()
+    def class_probability_std(self):
+        occurrences = np.array([occurrence for occurrence in self.occurrence_dict.values()], dtype=np.float64)
+
+        return (occurrences / self.numberOfInstances).std()
+
+'''
+    @staticmethod
             
     ################################################################################
     # Reif, A Comprehensive Dataset for Evaluating Approaches of various Meta-Learning Tasks
@@ -520,170 +622,4 @@ class DataSetFeatureExtractor(object):
         sum = np.nansum(NumSymbols(X, y, categorical))
         return sum if np.isfinite(sum) else 0
 
-
-    ################################################################################
-    # Landmarking features, computed with cross validation
-    # These should be invoked with the same transformations of X and y with which
-    # sklearn will be called later on
-    # from Pfahringer 2000
-    # Linear discriminant learner
-
-    def landmark_lda(self):
-        if not sps.issparse(self.x):
-            import sklearn.discriminant_analysis
-
-            if len(self.y.shape) == 1 or self.y.shape[1] == 1:
-                kf = sklearn.model_selection.StratifiedKFold(n_splits=10)
-            else:
-                kf = sklearn.model_selection.KFold(n_splits=10)
-
-            accuracy = 0.
-            try:
-                for train, test in kf.split(self.x, self.y):
-                    lda = sklearn.discriminant_analysis.LinearDiscriminantAnalysis()
-
-                    if len(self.y.shape) == 1 or self.y.shape[1] == 1:
-                        lda.fit(self.x[train], self.y[train])
-                    else:
-                        lda = OneVsRestClassifier(lda)
-                        lda.fit(self.x[train], self.y[train])
-
-                    predictions = lda.predict(self.x[test])
-                    accuracy += sklearn.metrics.accuracy_score(predictions, self.y[test])
-                return accuracy / 10
-            except scipy.linalg.LinAlgError as e:
-                # self.logger.warning("LDA failed: %s Returned 0 instead!" % e)
-                return np.NaN
-            except ValueError as e:
-                # self.logger.warning("LDA failed: %s Returned 0 instead!" % e)
-                return np.NaN
-
-        else:
-            return np.NaN
-
-    def landmark_naive_bayes(self):
-        if not sps.issparse(self.x):
-            import sklearn.naive_bayes
-
-            if len(self.y.shape) == 1 or self.y.shape[1] == 1:
-                kf = sklearn.model_selection.StratifiedKFold(n_splits=10)
-            else:
-                kf = sklearn.model_selection.KFold(n_splits=10)
-
-            accuracy = 0.
-            for train, test in kf.split(self.x, self.y):
-                nb = sklearn.naive_bayes.GaussianNB()
-
-                if len(self.y.shape) == 1 or self.y.shape[1] == 1:
-                    nb.fit(self.x[train], self.y[train])
-                else:
-                    nb = OneVsRestClassifier(nb)
-                    nb.fit(self.x[train], self.y[train])
-
-                predictions = nb.predict(self.x[test])
-                accuracy += sklearn.metrics.accuracy_score(predictions, self.y[test])
-            return accuracy / 10
-
-        else:
-            return np.NaN
-
-    def landmark_decision_tree(self):
-        if not sps.issparse(self.x):
-            import sklearn.tree
-
-            if len(self.y.shape) == 1 or self.y.shape[1] == 1:
-                kf = sklearn.model_selection.StratifiedKFold(n_splits=10)
-            else:
-                kf = sklearn.model_selection.KFold(n_splits=10)
-
-            accuracy = 0.
-            for train, test in kf.split(self.x, self.y):
-                random_state = sklearn.utils.check_random_state(42)
-                tree = sklearn.tree.DecisionTreeClassifier(random_state=random_state)
-
-                if len(self.y.shape) == 1 or self.y.shape[1] == 1:
-                    tree.fit(self.x[train], self.y[train])
-                else:
-                    tree = OneVsRestClassifier(tree)
-                    tree.fit(self.x[train], self.y[train])
-
-                predictions = tree.predict(self.x[test])
-                accuracy += sklearn.metrics.accuracy_score(predictions, self.y[test])
-            return accuracy / 10
-
-        else:
-            return np.NaN
-
-    def landmark_decision_node_learner(self):
-        if not sps.issparse(self.x):
-            import sklearn.tree
-
-            if len(self.y.shape) == 1 or self.y.shape[1] == 1:
-                kf = sklearn.model_selection.StratifiedKFold(n_splits=10)
-            else:
-                kf = sklearn.model_selection.KFold(n_splits=10)
-
-            accuracy = 0.
-            for train, test in kf.split(self.x, self.y):
-                random_state = sklearn.utils.check_random_state(42)
-                node = sklearn.tree.DecisionTreeClassifier(
-                    criterion="entropy", max_depth=1, random_state=random_state,
-                    min_samples_split=2, min_samples_leaf=1, max_features=None)
-                if len(self.y.shape) == 1 or self.y.shape[1] == 1:
-                    node.fit(self.x[train], self.y[train])
-                else:
-                    node = OneVsRestClassifier(node)
-                    node.fit(self.x[train], self.y[train])
-                predictions = node.predict(self.x[test])
-                accuracy += sklearn.metrics.accuracy_score(predictions, self.y[test])
-            return accuracy / 10
-
-        else:
-            return np.NaN
-
-    def landmark_random_node_learner(self):
-        if not sps.issparse(self.x):
-            import sklearn.tree
-
-            if len(self.y.shape) == 1 or self.y.shape[1] == 1:
-                kf = sklearn.model_selection.StratifiedKFold(n_splits=10)
-            else:
-                kf = sklearn.model_selection.KFold(n_splits=10)
-            accuracy = 0.
-
-            for train, test in kf.split(self.x, self.y):
-                random_state = sklearn.utils.check_random_state(42)
-                node = sklearn.tree.DecisionTreeClassifier(
-                    criterion="entropy", max_depth=1, random_state=random_state,
-                    min_samples_split=2, min_samples_leaf=1, max_features=1)
-                node.fit(self.x[train], self.y[train])
-                predictions = node.predict(self.x[test])
-                accuracy += sklearn.metrics.accuracy_score(predictions, self.y[test])
-            return accuracy / 10
-
-        else:
-            return np.NaN
-
-    # Replace the Elite 1NN with a normal 1NN, this slightly changes the
-    # intuition behind this landmark, but Elite 1NN is used nowhere else...
-
-    def landmark_1nn(self):
-        import sklearn.neighbors
-
-        if len(self.y.shape) == 1 or self.y.shape[1] == 1:
-            kf = sklearn.model_selection.StratifiedKFold(n_splits=10)
-        else:
-            kf = sklearn.model_selection.KFold(n_splits=10)
-
-        accuracy = 0.
-        for train, test in kf.split(self.x, self.y):
-            kNN = sklearn.neighbors.KNeighborsClassifier(n_neighbors=1)
-            if len(self.y.shape) == 1 or self.y.shape[1] == 1:
-                kNN.fit(self.x[train], self.y[train])
-            else:
-                kNN = OneVsRestClassifier(kNN)
-                kNN.fit(self.x[train], self.y[train])
-            predictions = kNN.predict(self.x[test])
-            accuracy += sklearn.metrics.accuracy_score(predictions, self.y[test])
-        return accuracy / 10
 '''
