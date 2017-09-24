@@ -44,12 +44,6 @@ class DataSetFeatureExtractor(object):
                    'class_probability_max',
                    'class_probability_mean',
                    'class_probability_std',
-                   'num_symbols',
-                   'symbols_min',
-                   'symbols_max',
-                   'symbols_mean',
-                   'symbols_std',
-                   'symbols_sum',
                    'kurtosis_min',
                    'kurtosis_max',
                    'kurtosis_mean',
@@ -69,7 +63,7 @@ class DataSetFeatureExtractor(object):
                    'pca_kurtosis_first_pc',
                    'pca_skewness_first_pc']
 
-    def __init__(self, x, y):
+    def __init__(self, x, y, categorical=0, numerical=0):
 
         if type(x) is not np.ndarray or type(y) is not np.ndarray:
             # TODO: raise correct error
@@ -84,7 +78,10 @@ class DataSetFeatureExtractor(object):
         self.y = y  # y is the labels as a 1d row or column vector, assume no missing in y
 
         self.numberOfInstances = x.shape[0]
-        self.numberOfFeatures = x.shape[1]
+        self.numberOfFeatures = x.shape[1]  # this number is the number after one-hot encoding
+
+        self.numberOfCategorical = categorical
+        self.numberOfNumerical = numerical
 
         # PCA calculate can't take NaN or inf entries, so we remove those rows
         mask = ~np.any(~np.isfinite(self.x), axis=1)
@@ -127,7 +124,6 @@ class DataSetFeatureExtractor(object):
                 self.skews.append(scipy.stats.skew(x_new.data[start:stop]))
 
     def get_feature_list(self):
-
         return self.featureList
 
     def extract_features(self, feature_used):
@@ -142,11 +138,9 @@ class DataSetFeatureExtractor(object):
         return features
 
     def number_of_instances(self):
-
         return float(self.numberOfInstances)
 
     def log_number_of_instances(self):
-
         return np.log(self.numberOfInstances)
 
     def number_of_classes(self):
@@ -159,11 +153,9 @@ class DataSetFeatureExtractor(object):
             return float(len(np.unique(self.y)))
 
     def number_of_features(self):
-
         return float(self.numberOfFeatures)
 
     def log_number_of_features(self):
-
         return np.log(self.numberOfFeatures)
 
     def number_of_instances_with_missing_values(self):
@@ -179,7 +171,6 @@ class DataSetFeatureExtractor(object):
         return float(np.sum([1 if num > 0 else 0 for num in num_missing]))
 
     def percentage_of_instances_with_missing_values(self):
-
         return DataSetFeatureExtractor.number_of_instances_with_missing_values(self) / \
                DataSetFeatureExtractor.number_of_instances(self)
 
@@ -196,57 +187,44 @@ class DataSetFeatureExtractor(object):
         return float(np.sum([1 if num > 0 else 0 for num in num_missing]))
 
     def percentage_of_features_with_missing_values(self):
-
         return DataSetFeatureExtractor.number_of_features_with_missing_values(self) / \
                DataSetFeatureExtractor.number_of_features(self)
 
     def number_of_missing_values(self):
-
         return float(self.missing.sum())
 
     def percentage_of_missing_values(self):
-
         return float(DataSetFeatureExtractor.number_of_missing_values(self)) / \
                (self.numberOfInstances * self.numberOfFeatures)
 
-    # @staticmethod
-    # def number_of_numeric_features(x, y):
-    #     return len(categorical) - np.sum(categorical)
+    def number_of_numeric_features(self):
+        return self.numberOfNumerical
 
-    # def NumberOfCategoricalFeatures(X, y, categorical):
-    #     return np.sum(categorical)
+    def number_of_categorical_features(self):
+        return self.numberOfCategorical
 
-    # def RatioNumericalToNominal(X, y, categorical):
-    #     num_categorical = float(NumberOfCategoricalFeatures(X, y, categorical))
-    #     num_numerical = float(NumberOfNumericFeatures(X, y, categorical))
-    #     if num_categorical == 0.0:
-    #        return 0.
-    #     return num_numerical / num_categorical
+    def ratio_numerical_to_nominal(self):
+        if self.numberOfCategorical == 0.0:
+            return 0.
 
-    # def RatioNominalToNumerical(X, y, categorical):
-    #     num_categorical = float(NumberOfCategoricalFeatures(X, y, categorical))
-    #     num_numerical = float(NumberOfNumericFeatures(X, y, categorical))
-    #     if num_numerical == 0.0:
-    #         return 0.
-    #     else:
-    #         return num_categorical / num_numerical
+        return self.numberOfNumerical / self.numberOfCategorical
 
-    # Number of attributes divided by number of samples
+    def ratio_nominal_to_numerical(self):
+        if self.numberOfNumerical == 0.0:
+            return 0.
+
+        return self.numberOfCategorical / self.numberOfNumerical
 
     def data_set_ratio(self):
-
         return self.numberOfFeatures / float(self.numberOfInstances)
 
     def log_data_set_ratio(self):
-
         return np.log(DataSetFeatureExtractor.data_set_ratio(self))
 
     def inverse_data_set_ratio(self):
-
         return float(1 / DataSetFeatureExtractor.number_of_instances(self))
 
     def log_inverse_data_set_ratio(self):
-
         return np.log(DataSetFeatureExtractor.inverse_data_set_ratio(self))
 
     ##################################################################################
@@ -561,65 +539,3 @@ class DataSetFeatureExtractor(object):
         occurrences = np.array([occurrence for occurrence in self.occurrence_dict.values()], dtype=np.float64)
 
         return (occurrences / self.numberOfInstances).std()
-
-'''
-    @staticmethod
-            
-    ################################################################################
-    # Reif, A Comprehensive Dataset for Evaluating Approaches of various Meta-Learning Tasks
-    # defines these five metafeatures as simple metafeatures, but they could also
-    # be the counterpart for the skewness and kurtosis of the numerical features
-
-    def num_symbols(self, X, y, categorical):
-        if not sps.issparse(self.x):
-            symbols_per_column = []
-            for i, column in enumerate(self.x.T):
-                if categorical[i]:
-                    unique_values = np.unique(column)
-                    num_unique = np.sum(np.isfinite(unique_values))
-                    symbols_per_column.append(num_unique)
-            return symbols_per_column
-
-        else:
-            symbols_per_column = []
-            new_X = X.tocsc()
-            for i in range(new_X.shape[1]):
-                if categorical[i]:
-                    unique_values = np.unique(new_X.getcol(i).data)
-                    num_unique = np.sum(np.isfinite(unique_values))
-                    symbols_per_column.append(num_unique)
-            return symbols_per_column
-
-    def SymbolsMin(X, y, categorical):
-        # The minimum can only be zero if there are no nominal features,
-        # otherwise it is at least one
-        # TODO: shouldn't this rather be two?
-        minimum = None
-        for unique in NumSymbols(X, y, categorical):
-            if unique > 0 and (minimum is None or unique < minimum):
-                minimum = unique
-        return minimum if minimum is not None else 0
-
-    def SymbolsMax(X, y, categorical):
-        values = NumSymbols(X, y, categorical)
-        if len(values) == 0:
-            return 0
-        return max(max(values), 0)
-
-    def SymbolsMean(X, y, categorical):
-        # TODO: categorical attributes without a symbol don't count towards this
-        # measure
-        values = [val for val in NumSymbols(X, y, categorical) if val > 0]
-        mean = np.nanmean(values)
-        return mean if np.isfinite(mean) else 0
-
-    def SymbolsSTD(X, y, categorical):
-        values = [val for val in NumSymbols(X, y, categorical) if val > 0]
-        std = np.nanstd(values)
-        return std if np.isfinite(std) else 0
-
-    def SymbolsSum(X, y, categorical):
-        sum = np.nansum(NumSymbols(X, y, categorical))
-        return sum if np.isfinite(sum) else 0
-
-'''
