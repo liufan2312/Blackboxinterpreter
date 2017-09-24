@@ -54,4 +54,5 @@ l = DataSetFeatureExtractor(x, y).extract_features(['number_of_instances',
                                                     'pca_fraction_of_components_for_95_percent_variance',
                                                     'pca_kurtosis_first_pc',
                                                     'pca_skewness_first_pc'])
+print len(l)
 print l
